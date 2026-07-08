@@ -1,0 +1,1789 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iconografo — Generatore di icone da descrizione testuale</title>
+  <meta name="description" content="Trasforma una parola in un'icona disegnata al volo con forme geometriche e pattern predefiniti. Genera, rigenera varianti, esporta in PNG e salva nella galleria condivisa.">
+  <link rel="canonical" href="https://cristianporco.it/app/iconografo/">
+  <base href="./">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Iconografo — Generatore di icone da descrizione testuale">
+  <meta property="og:description" content="Scrivi una parola e ottieni un'icona stilizzata disegnata con l'API Canvas. Rigenera varianti, scarica PNG, condividi nella galleria.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://cristianporco.it/app/iconografo/">
+  <meta property="og:locale" content="it_IT">
+
+  <!-- JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Iconografo",
+    "description": "Generatore di icone da descrizione testuale tramite Canvas",
+    "url": "https://cristianporco.it/app/iconografo/",
+    "applicationCategory": "DesignApplication",
+    "operatingSystem": "Any",
+    "inLanguage": "it"
+  }
+  </script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:ital,opsz,wght@0,14..32,400..600;1,14..32,400..600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    /* ── Design Tokens ─────────────────────────────────────────────── */
+    :root {
+      --color-bg: #FAF9F7;
+      --color-surface: #FFFFFF;
+      --color-text: #1A1817;
+      --color-text-secondary: #6B6560;
+      --color-text-muted: #9C9690;
+      --color-primary: #FF5E3A;
+      --color-primary-hover: #E84A2A;
+      --color-primary-soft: #FFF0EC;
+      --color-secondary: #2563EB;
+      --color-secondary-soft: #EEF2FF;
+      --color-success: #059669;
+      --color-error: #DC2626;
+      --color-border: #E5E0DB;
+      --color-canvas-bg: #F0EDE8;
+      --color-canvas-dot: #D4CFC8;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 1px 3px rgba(26,24,23,0.06);
+      --shadow-md: 0 4px 12px rgba(26,24,23,0.08);
+      --font-display: 'DM Serif Display', Georgia, 'Times New Roman', serif;
+      --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    }
+
+    /* ── Reset & Base ──────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: var(--font-body);
+      background: var(--color-bg);
+      color: var(--color-text);
+      line-height: 1.6;
+      min-height: 100dvh;
+    }
+
+    /* ── Focus ─────────────────────────────────────────────────────── */
+    :focus-visible {
+      outline: 3px solid var(--color-primary);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    /* ── Layout ────────────────────────────────────────────────────── */
+    .app {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 16px 16px 32px;
+    }
+
+    /* ── Header ────────────────────────────────────────────────────── */
+    .app-header {
+      text-align: center;
+      padding: 20px 0 8px;
+    }
+    .app-header h1 {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      color: var(--color-text);
+      line-height: 1.2;
+    }
+    .app-header .subtitle {
+      font-size: 0.9375rem;
+      color: var(--color-text-secondary);
+      margin-top: 4px;
+    }
+
+    /* ── Card ──────────────────────────────────────────────────────── */
+    .card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* ── Input Group ───────────────────────────────────────────────── */
+    .input-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .input-group .field-wrap {
+      flex: 1 1 200px;
+      min-width: 0;
+    }
+    label {
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      margin-bottom: 4px;
+      letter-spacing: 0.01em;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 1rem;
+      font-family: var(--font-body);
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      background: var(--color-surface);
+      color: var(--color-text);
+      transition: border-color 200ms ease;
+    }
+    input[type="text"]:hover { border-color: #C5BFB8; }
+    input[type="text"]:focus {
+      border-color: var(--color-primary);
+      outline: none;
+      box-shadow: 0 0 0 3px var(--color-primary-soft);
+    }
+    input[type="text"]::placeholder { color: var(--color-text-muted); }
+
+    /* ── Buttons ───────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 18px;
+      font-size: 0.9375rem;
+      font-family: var(--font-body);
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      min-height: 44px;
+      min-width: 44px;
+      transition: background 150ms ease, transform 100ms ease, box-shadow 150ms ease;
+      white-space: nowrap;
+      user-select: none;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary {
+      background: var(--color-primary);
+      color: #FFF;
+    }
+    .btn-primary:hover { background: var(--color-primary-hover); }
+    .btn-secondary {
+      background: var(--color-secondary-soft);
+      color: var(--color-secondary);
+    }
+    .btn-secondary:hover { background: #DDE4FF; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--color-text-secondary);
+      border: 1px solid var(--color-border);
+    }
+    .btn-ghost:hover { background: #F5F2ED; }
+    .btn-success {
+      background: var(--color-success);
+      color: #FFF;
+    }
+    .btn-success:hover { background: #047857; }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    /* ── Canvas Area ───────────────────────────────────────────────── */
+    .canvas-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .canvas-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 320px;
+      aspect-ratio: 1;
+      background: var(--color-canvas-bg);
+      /* Dot grid */
+      background-image: radial-gradient(circle, var(--color-canvas-dot) 1.2px, transparent 1.2px);
+      background-size: 16px 16px;
+      border-radius: var(--radius-md);
+      border: 2px solid var(--color-border);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .canvas-wrapper canvas {
+      display: block;
+      width: 80%;
+      height: 80%;
+      image-rendering: auto;
+    }
+    .variant-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+      background: var(--color-canvas-bg);
+      padding: 4px 10px;
+      border-radius: 99px;
+      margin-top: 8px;
+    }
+    .variant-badge strong {
+      color: var(--color-text-secondary);
+    }
+
+    /* ── Gallery ───────────────────────────────────────────────────── */
+    .gallery-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .gallery-header h2 {
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 400;
+      color: var(--color-text);
+    }
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 10px;
+    }
+    .gallery-item {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      transition: border-color 150ms ease, box-shadow 150ms ease;
+    }
+    .gallery-item:hover {
+      border-color: var(--color-primary);
+      box-shadow: var(--shadow-md);
+    }
+    .gallery-item img {
+      width: 64px;
+      height: 64px;
+      image-rendering: auto;
+      border-radius: 4px;
+    }
+    .gallery-item .word-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--color-text-secondary);
+      text-align: center;
+      max-width: 80px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ── Toast ─────────────────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--color-text);
+      color: #FFF;
+      padding: 10px 20px;
+      border-radius: 99px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 250ms ease, transform 250ms ease;
+    }
+    .toast.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .toast.error { background: var(--color-error); }
+    .toast.success { background: var(--color-success); }
+
+    /* ── Empty State ───────────────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--color-text-muted);
+    }
+    .empty-state p {
+      font-size: 0.9375rem;
+      margin-top: 4px;
+    }
+
+    /* ── Responsive ────────────────────────────────────────────────── */
+    @media (max-width: 480px) {
+      .app { padding: 12px 12px 24px; }
+      .card { padding: 16px; }
+      .app-header h1 { font-size: 1.6rem; }
+      .btn-row { flex-direction: column; }
+      .btn-row .btn { width: 100%; }
+      .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+    }
+
+    /* ── Reduced Motion ────────────────────────────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="app-header">
+      <h1>Iconografo</h1>
+      <p class="subtitle">Scrivi una parola, ottieni un'icona</p>
+    </header>
+
+    <main>
+      <!-- Input Card -->
+      <div class="card" role="region" aria-label="Generatore di icone">
+        <div class="input-group">
+          <div class="field-wrap">
+            <label for="word-input">Parola chiave</label>
+            <input type="text" id="word-input" placeholder="es. cane, casa, stella…" autocomplete="off" maxlength="40" aria-describedby="word-hint">
+          </div>
+        </div>
+        <p id="word-hint" class="variant-badge" style="margin-top:6px;background:transparent;padding-left:0;">
+          Prova: cane, gatto, casa, albero, stella, cuore, sole, luna, fiore, nuvola, barca, auto, freccia, mela, pizza...
+        </p>
+        <div class="btn-row">
+          <button id="btn-generate" class="btn btn-primary" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Genera icona
+          </button>
+          <button id="btn-regenerate" class="btn btn-secondary" type="button" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            Rigenera variante
+          </button>
+        </div>
+      </div>
+
+      <!-- Canvas Preview Card -->
+      <div class="card canvas-section" role="region" aria-label="Anteprima icona">
+        <div class="canvas-wrapper" id="canvas-wrapper">
+          <canvas id="icon-canvas" width="256" height="256" aria-label="Anteprima dell'icona generata"></canvas>
+        </div>
+        <span class="variant-badge" id="variant-badge" style="display:none;">
+          Variante <strong id="variant-number">#0</strong>
+        </span>
+        <div class="btn-row">
+          <button id="btn-download" class="btn btn-ghost" type="button" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Scarica PNG 64×64
+          </button>
+          <button id="btn-save" class="btn btn-success" type="button" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            Salva in galleria
+          </button>
+        </div>
+      </div>
+
+      <!-- Gallery Card -->
+      <div class="card" role="region" aria-label="Galleria condivisa">
+        <div class="gallery-header">
+          <h2>Galleria condivisa</h2>
+          <button id="btn-refresh-gallery" class="btn btn-ghost" type="button" style="padding:6px 12px;font-size:0.8125rem;min-height:36px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Aggiorna
+          </button>
+        </div>
+        <div class="gallery-grid" id="gallery-grid" role="list" aria-label="Icone salvate">
+          <div class="empty-state" id="gallery-empty">
+            <p>Nessuna icona salvata. Genera un'icona e salvala per vederla qui.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer style="text-align:center;padding:12px 0;font-size:0.8125rem;color:var(--color-text-muted);">
+      Iconografo — genera icone con Canvas, senza API esterne
+    </footer>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+  /* ═══════════════════════════════════════════════════════════════════
+     Iconografo — JavaScript engine
+     ═══════════════════════════════════════════════════════════════════ */
+
+  // ── DOM refs ────────────────────────────────────────────────────────
+  const wordInput = document.getElementById('word-input');
+  const btnGenerate = document.getElementById('btn-generate');
+  const btnRegenerate = document.getElementById('btn-regenerate');
+  const btnDownload = document.getElementById('btn-download');
+  const btnSave = document.getElementById('btn-save');
+  const btnRefreshGallery = document.getElementById('btn-refresh-gallery');
+  const canvas = document.getElementById('icon-canvas');
+  const ctx = canvas.getContext('2d');
+  const variantBadge = document.getElementById('variant-badge');
+  const variantNumber = document.getElementById('variant-number');
+  const galleryGrid = document.getElementById('gallery-grid');
+  const galleryEmpty = document.getElementById('gallery-empty');
+  const toast = document.getElementById('toast');
+
+  // ── State ──────────────────────────────────────────────────────────
+  let currentWord = '';
+  let currentVariant = 0;
+  let currentPngData = null;
+
+  // ── Seeded RNG (mulberry32) ────────────────────────────────────────
+  function hashStr(str) {
+    let h = 0;
+    for (let i = 0; i < str.length; i++) {
+      h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+    }
+    return h;
+  }
+
+  function createRNG(seed) {
+    let s = seed | 0;
+    return function() {
+      s |= 0;
+      s = (s + 0x6D2B79F5) | 0;
+      let t = Math.imul(s ^ (s >>> 15), 1 | s);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // ── Palettes ───────────────────────────────────────────────────────
+  const PALETTES = {
+    warm:    ['#FF5E3A','#FF8C42','#FFB347','#FF6B6B','#1A1817','#FFFFFF'],
+    cool:    ['#2563EB','#3B82F6','#60A5FA','#93C5FD','#1A1817','#FFFFFF'],
+    earth:   ['#8B5E3C','#A67C52','#C4956A','#6B8E4E','#1A1817','#FFFFFF'],
+    fresh:   ['#059669','#10B981','#34D399','#6EE7B7','#1A1817','#FFFFFF'],
+    sunset:  ['#E84A4A','#F5A623','#F8E71C','#D0021B','#1A1817','#FFFFFF'],
+    ocean:   ['#0EA5E9','#06B6D4','#22D3EE','#67E8F9','#1A1817','#FFFFFF'],
+    berry:   ['#7C3AED','#8B5CF6','#A78BFA','#C4B5FD','#1A1817','#FFFFFF'],
+    citrus:  ['#F59E0B','#FBBF24','#FCD34D','#FDE68A','#1A1817','#FFFFFF'],
+    rose:    ['#E11D48','#F43F5E','#FB7185','#FDA4AF','#1A1817','#FFFFFF'],
+    forest:  ['#166534','#15803D','#22C55E','#86EFAC','#1A1817','#FFFFFF'],
+    slate:   ['#334155','#475569','#64748B','#94A3B8','#1A1817','#FFFFFF'],
+    amber:   ['#B45309','#D97706','#F59E0B','#FDE68A','#1A1817','#FFFFFF'],
+  };
+
+  function pickPalette(word, variant) {
+    const cats = {
+      warm:  ['cane','gatto','cavallo','leone','tigre','volpe','scoiattolo'],
+      cool:  ['pesce','uccello','delfino','balena','pinguino','onda','goccia','nuvola'],
+      earth: ['albero','montagna','fungo','foglia','casa','libro','matita'],
+      fresh: ['fiore','mela','ciliegia','gelato','pizza','foglia','erba'],
+      sunset:['sole','fuoco','fulmine','stella','cometa','fiamma','tramonto'],
+      ocean: ['barca','ancora','luna','pesce','delfino','balena','conchiglia'],
+      berry: ['cuore','corona','farfalla','fiore','diamante','gemma'],
+      citrus:['ape','girasole','limone','arancia','banana','stella'],
+      rose:  ['cuore','bacio','rosa','amore','valentine'],
+      forest:['albero','pino','fungo','cervo','orso','lupo','muschio'],
+      slate: ['computer','ingranaggio','wifi','telefono','orologio','robot'],
+      amber: ['chiave','lampada','candela','tesoro','moneta','campana'],
+    };
+    const w = word.toLowerCase();
+    for (const [cat, words] of Object.entries(cats)) {
+      if (words.some(kw => w.includes(kw) || kw.includes(w))) {
+        return PALETTES[cat];
+      }
+    }
+    // Deterministic fallback based on hash
+    const keys = Object.keys(PALETTES);
+    return PALETTES[keys[Math.abs(hashStr(word + 'pal')) % keys.length]];
+  }
+
+  // ── Shape Renderer ─────────────────────────────────────────────────
+  // Each shape: { type, ...params, fill?, stroke?, width? }
+  // Coordinates 0-100 (percentage of canvas size)
+  function renderShapes(ctx, shapes, size, rng) {
+    ctx.clearRect(0, 0, size, size);
+    const s = size / 100; // scale factor
+
+    // Apply small random offsets based on rng
+    const jitter = (val, amount) => val + (rng() - 0.5) * amount;
+    const jit = 2; // jitter amount in 0-100 units
+
+    for (const sh of shapes) {
+      ctx.save();
+
+      if (sh.fill) ctx.fillStyle = sh.fill;
+      if (sh.stroke) ctx.strokeStyle = sh.stroke;
+      if (sh.width) ctx.lineWidth = sh.width * s;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      const jx = (p) => jitter(p, jit) * s;
+      const jy = (p) => jitter(p, jit) * s;
+
+      switch (sh.type) {
+        case 'circle': {
+          const cx = jx(sh.cx), cy = jy(sh.cy);
+          const r = sh.r * s;
+          ctx.beginPath();
+          ctx.arc(cx, cy, r, 0, Math.PI * 2);
+          if (sh.fill) ctx.fill();
+          if (sh.stroke) ctx.stroke();
+          break;
+        }
+        case 'ellipse': {
+          const cx = jx(sh.cx), cy = jy(sh.cy);
+          ctx.beginPath();
+          ctx.ellipse(cx, cy, sh.rx * s, sh.ry * s, sh.rot || 0, 0, Math.PI * 2);
+          if (sh.fill) ctx.fill();
+          if (sh.stroke) ctx.stroke();
+          break;
+        }
+        case 'rect': {
+          const x = jx(sh.x), y = jy(sh.y);
+          const w = sh.w * s, h = sh.h * s;
+          if (sh.rr) {
+            // Rounded rect
+            const rr = sh.rr * s;
+            ctx.beginPath();
+            ctx.moveTo(x + rr, y);
+            ctx.lineTo(x + w - rr, y);
+            ctx.arcTo(x + w, y, x + w, y + rr, rr);
+            ctx.lineTo(x + w, y + h - rr);
+            ctx.arcTo(x + w, y + h, x + w - rr, y + h, rr);
+            ctx.lineTo(x + rr, y + h);
+            ctx.arcTo(x, y + h, x, y + h - rr, rr);
+            ctx.lineTo(x, y + rr);
+            ctx.arcTo(x, y, x + rr, y, rr);
+            ctx.closePath();
+          } else {
+            ctx.beginPath();
+            ctx.rect(x, y, w, h);
+          }
+          if (sh.fill) ctx.fill();
+          if (sh.stroke) ctx.stroke();
+          break;
+        }
+        case 'triangle': {
+          ctx.beginPath();
+          ctx.moveTo(jx(sh.x1), jy(sh.y1));
+          ctx.lineTo(jx(sh.x2), jy(sh.y2));
+          ctx.lineTo(jx(sh.x3), jy(sh.y3));
+          ctx.closePath();
+          if (sh.fill) ctx.fill();
+          if (sh.stroke) ctx.stroke();
+          break;
+        }
+        case 'line': {
+          ctx.beginPath();
+          ctx.moveTo(jx(sh.x1), jy(sh.y1));
+          ctx.lineTo(jx(sh.x2), jy(sh.y2));
+          ctx.stroke();
+          break;
+        }
+        case 'polygon': {
+          ctx.beginPath();
+          const pts = sh.points;
+          ctx.moveTo(jx(pts[0][0]), jy(pts[0][1]));
+          for (let i = 1; i < pts.length; i++) {
+            ctx.lineTo(jx(pts[i][0]), jy(pts[i][1]));
+          }
+          ctx.closePath();
+          if (sh.fill) ctx.fill();
+          if (sh.stroke) ctx.stroke();
+          break;
+        }
+        case 'arc': {
+          ctx.beginPath();
+          ctx.arc(jx(sh.cx), jy(sh.cy), sh.r * s, sh.start, sh.end, sh.ccw || false);
+          if (sh.close) ctx.closePath();
+          if (sh.fill) ctx.fill();
+          if (sh.stroke) ctx.stroke();
+          break;
+        }
+      }
+      ctx.restore();
+    }
+  }
+
+  // ── Keyword Templates ──────────────────────────────────────────────
+  // Returns array of shapes given palette and rng
+  // palette: [p0,p1,p2,p3, dark, light]
+  // All coords 0-100
+
+  function tplCane(p, rng) { return [
+    // corpo
+    {type:'ellipse', cx:52, cy:58, rx:26, ry:18, fill:p[0]},
+    // testa
+    {type:'circle', cx:28, cy:36, r:16, fill:p[0]},
+    // orecchie
+    {type:'triangle', x1:19,y1:24, x2:24,y2:8, x3:31,y2:20, fill:p[2]},
+    {type:'triangle', x1:33,y1:20, x2:38,y2:8, x3:38,y2:24, fill:p[2]},
+    // occhi
+    {type:'circle', cx:24, cy:34, r:2.5, fill:p[4]},
+    {type:'circle', cx:32, cy:34, r:2.5, fill:p[4]},
+    // naso
+    {type:'circle', cx:20, cy:39, r:2, fill:p[4]},
+    // coda
+    {type:'line', x1:74, y1:50, x2:86, y2:32, stroke:p[0], width:3.5},
+    // zampe
+    {type:'rect', x:38, y:72, w:7, h:16, rr:3, fill:p[0]},
+    {type:'rect', x:56, y:72, w:7, h:16, rr:3, fill:p[0]},
+    // macchia occhio
+    {type:'circle', cx:30, cy:32, r:3.5, fill:p[2], width:0},
+  ];}
+
+  function tplGatto(p, rng) { return [
+    {type:'ellipse', cx:52, cy:58, rx:24, ry:17, fill:p[0]},
+    {type:'circle', cx:30, cy:34, r:15, fill:p[0]},
+    // orecchie appuntite
+    {type:'triangle', x1:20,y1:24, x2:25,y2:5, x3:33,y2:20, fill:p[1]},
+    {type:'triangle', x1:33,y1:20, x2:40,y2:5, x3:43,y2:23, fill:p[1]},
+    // orecchie interne
+    {type:'triangle', x1:22,y1:22, x2:25,y2:8, x3:30,y2:20, fill:p[3]},
+    {type:'triangle', x1:34,y1:20, x2:38,y2:8, x3:40,y2:22, fill:p[3]},
+    // occhi
+    {type:'ellipse', cx:26, cy:32, rx:3, ry:2.5, fill:p[4]},
+    {type:'ellipse', cx:36, cy:32, rx:3, ry:2.5, fill:p[4]},
+    // pupille
+    {type:'ellipse', cx:26, cy:32, rx:1.5, ry:2.2, fill:p[5]},
+    {type:'ellipse', cx:36, cy:32, rx:1.5, ry:2.2, fill:p[5]},
+    // naso
+    {type:'triangle', x1:30,y1:36, x2:32,y2:36, x3:31,y3:39, fill:p[2]},
+    // baffi
+    {type:'line', x1:16,y1:37, x2:25,y2:38, stroke:p[4], width:0.8},
+    {type:'line', x1:16,y1:40, x2:25,y2:40, stroke:p[4], width:0.8},
+    {type:'line', x1:37,y1:38, x2:46,y2:37, stroke:p[4], width:0.8},
+    {type:'line', x1:37,y1:40, x2:46,y2:40, stroke:p[4], width:0.8},
+    // coda
+    {type:'line', x1:74,y1:52, x2:88,y2:28, stroke:p[0], width:3.5},
+    // zampe
+    {type:'rect', x:40, y:72, w:6, h:15, rr:3, fill:p[0]},
+    {type:'rect', x:56, y:72, w:6, h:15, rr:3, fill:p[0]},
+  ];}
+
+  function tplUccello(p, rng) { return [
+    // corpo
+    {type:'ellipse', cx:50, cy:55, rx:20, ry:16, fill:p[0]},
+    // testa
+    {type:'circle', cx:35, cy:35, r:12, fill:p[1]},
+    // becco
+    {type:'triangle', x1:24,y1:33, x2:14,y2:36, x3:24,y3:39, fill:p[3]},
+    // occhio
+    {type:'circle', cx:32, cy:32, r:2.5, fill:p[4]},
+    // ala
+    {type:'ellipse', cx:55, cy:50, rx:14, ry:9, rot:-0.3, fill:p[2]},
+    // coda
+    {type:'triangle', x1:68,y1:50, x2:88,y2:38, x3:86,y3:62, fill:p[2]},
+    // zampe
+    {type:'line', x1:44,y1:70, x2:42,y2:82, stroke:p[3], width:1.8},
+    {type:'line', x1:52,y1:70, x2:54,y2:82, stroke:p[3], width:1.8},
+  ];}
+
+  function tplPesce(p, rng) { return [
+    {type:'ellipse', cx:50, cy:52, rx:28, ry:16, fill:p[0]},
+    // coda
+    {type:'triangle', x1:76,y1:52, x2:92,y2:36, x3:92,y3:68, fill:p[1]},
+    // occhio
+    {type:'circle', cx:34, cy:48, r:4, fill:p[5]},
+    {type:'circle', cx:33, cy:47, r:2, fill:p[4]},
+    // pinna superiore
+    {type:'triangle', x1:48,y1:36, x2:58,y2:20, x3:60,y3:36, fill:p[2]},
+    // pinna inferiore
+    {type:'triangle', x1:50,y1:68, x2:56,y2:80, x3:62,y3:68, fill:p[2]},
+    // squame
+    {type:'arc', cx:55, cy:52, r:7, start:0, end:Math.PI, stroke:p[3], width:1, close:false},
+  ];}
+
+  function tplCavallo(p, rng) { return [
+    // corpo
+    {type:'ellipse', cx:50, cy:52, rx:22, ry:16, fill:p[0]},
+    // collo
+    {type:'rect', x:38, y:18, w:12, h:30, rr:6, fill:p[0]},
+    // testa
+    {type:'ellipse', cx:44, cy:20, rx:12, ry:9, rot:-0.2, fill:p[0]},
+    // orecchie
+    {type:'triangle', x1:47,y1:12, x2:50,y2:3, x3:54,y3:13, fill:p[2]},
+    // occhio
+    {type:'circle', cx:40, cy:18, r:2, fill:p[4]},
+    // criniera
+    {type:'line', x1:48,y1:14, x2:48,y2:40, stroke:p[2], width:3},
+    // zampe
+    {type:'rect', x:36, y:64, w:6, h:22, rr:3, fill:p[0]},
+    {type:'rect', x:44, y:64, w:6, h:22, rr:3, fill:p[0]},
+    {type:'rect', x:54, y:64, w:6, h:22, rr:3, fill:p[0]},
+    {type:'rect', x:62, y:64, w:6, h:22, rr:3, fill:p[0]},
+    // coda
+    {type:'line', x:72,y1:46, x2:86,y2:58, stroke:p[0], width:3},
+  ];}
+
+  function tplFarfalla(p, rng) { return [
+    // ali superiori
+    {type:'ellipse', cx:40, cy:40, rx:16, ry:20, rot:-0.3, fill:p[0]},
+    {type:'ellipse', cx:60, cy:40, rx:16, ry:20, rot:0.3, fill:p[0]},
+    // ali inferiori
+    {type:'ellipse', cx:42, cy:62, rx:12, ry:14, rot:-0.2, fill:p[1]},
+    {type:'ellipse', cx:58, cy:62, rx:12, ry:14, rot:0.2, fill:p[1]},
+    // corpo
+    {type:'ellipse', cx:50, cy:48, rx:4, ry:16, fill:p[4]},
+    // antenne
+    {type:'line', x1:48,y1:32, x2:38,y2:18, stroke:p[4], width:1.2},
+    {type:'line', x1:52,y1:32, x2:62,y2:18, stroke:p[4], width:1.2},
+    // decorazioni ali
+    {type:'circle', cx:40, cy:40, r:4, fill:p[3]},
+    {type:'circle', cx:60, cy:40, r:4, fill:p[3]},
+    {type:'circle', cx:42, cy:62, r:3, fill:p[3]},
+    {type:'circle', cx:58, cy:62, r:3, fill:p[3]},
+  ];}
+
+  function tplGufo(p, rng) { return [
+    {type:'ellipse', cx:50, cy:55, rx:22, ry:24, fill:p[0]},
+    // occhioni
+    {type:'circle', cx:40, cy:44, r:10, fill:p[5]},
+    {type:'circle', cx:60, cy:44, r:10, fill:p[5]},
+    {type:'circle', cx:40, cy:44, r:4.5, fill:p[4]},
+    {type:'circle', cx:60, cy:44, r:4.5, fill:p[4]},
+    {type:'circle', cx:39, cy:43, r:1.5, fill:p[5]},
+    {type:'circle', cx:59, cy:43, r:1.5, fill:p[5]},
+    // becco
+    {type:'triangle', x1:48,y1:48, x2:52,y2:48, x3:50,y3:54, fill:p[2]},
+    // orecchie
+    {type:'triangle', x1:34,y1:34, x2:40,y2:18, x3:46,y3:34, fill:p[1]},
+    {type:'triangle', x1:54,y1:34, x2:60,y2:18, x3:66,y3:34, fill:p[1]},
+    // ali
+    {type:'ellipse', cx:30, cy:58, rx:10, ry:16, rot:0.2, fill:p[1]},
+    {type:'ellipse', cx:70, cy:58, rx:10, ry:16, rot:-0.2, fill:p[1]},
+    // zampe
+    {type:'line', x1:44,y1:78, x2:40,y2:88, stroke:p[3], width:2},
+    {type:'line', x1:50,y1:78, x2:48,y2:88, stroke:p[3], width:2},
+    {type:'line', x1:56,y1:78, x2:60,y2:88, stroke:p[3], width:2},
+  ];}
+
+  function tplConiglio(p, rng) { return [
+    {type:'ellipse', cx:52, cy:58, rx:24, ry:18, fill:p[0]},
+    {type:'circle', cx:34, cy:36, r:14, fill:p[0]},
+    // orecchie lunghe
+    {type:'ellipse', cx:28, cy:14, rx:5, ry:16, fill:p[0]},
+    {type:'ellipse', cx:30, cy:14, rx:3, ry:12, fill:p[3]},
+    {type:'ellipse', cx:40, cy:14, rx:5, ry:16, fill:p[0]},
+    {type:'ellipse', cx:38, cy:14, rx:3, ry:12, fill:p[3]},
+    // occhi
+    {type:'circle', cx:30, cy:34, r:2.5, fill:p[4]},
+    {type:'circle', cx:38, cy:34, r:2.5, fill:p[4]},
+    // naso
+    {type:'triangle', x1:33,y1:38, x2:35,y2:38, x3:34,y3:41, fill:p[2]},
+    // zampe
+    {type:'rect', x:40, y:72, w:7, h:14, rr:3, fill:p[0]},
+    {type:'rect', x:56, y:72, w:7, h:14, rr:3, fill:p[0]},
+    // coda
+    {type:'circle', cx:76, cy:50, r:5, fill:p[5]},
+  ];}
+
+  function tplTartaruga(p, rng) { return [
+    // guscio
+    {type:'ellipse', cx:50, cy:52, rx:26, ry:18, fill:p[1]},
+    {type:'ellipse', cx:50, cy:52, rx:22, ry:14, fill:p[0]},
+    // motivi guscio
+    {type:'polygon', points:[[38,46],[50,38],[62,46],[50,54]], fill:p[2], stroke:p[4], width:0.8},
+    // testa
+    {type:'ellipse', cx:24, cy:46, rx:8, ry:7, fill:p[0]},
+    // occhio
+    {type:'circle', cx:21, cy:44, r:2, fill:p[4]},
+    // zampe
+    {type:'ellipse', cx:34, cy:68, rx:6, ry:4, fill:p[0]},
+    {type:'ellipse', cx:48, cy:68, rx:6, ry:4, fill:p[0]},
+    {type:'ellipse', cx:62, cy:68, rx:6, ry:4, fill:p[0]},
+  ];}
+
+  function tplElefante(p, rng) { return [
+    {type:'ellipse', cx:48, cy:56, rx:26, ry:20, fill:p[0]},
+    // testa
+    {type:'circle', cx:30, cy:36, r:16, fill:p[0]},
+    // proboscide
+    {type:'line', x1:18,y1:44, x2:10,y2:56, stroke:p[0], width:5},
+    // orecchio
+    {type:'ellipse', cx:38, cy:30, rx:10, ry:12, rot:-0.2, fill:p[2]},
+    {type:'ellipse', cx:38, cy:30, rx:6, ry:8, rot:-0.2, fill:p[3]},
+    // occhio
+    {type:'circle', cx:28, cy:32, r:2, fill:p[4]},
+    // zampe
+    {type:'rect', x:34, y:72, w:8, h:18, rr:4, fill:p[0]},
+    {type:'rect', x:46, y:72, w:8, h:18, rr:4, fill:p[0]},
+    {type:'rect', x:58, y:72, w:8, h:18, rr:4, fill:p[0]},
+    // coda
+    {type:'line', x1:74,y1:48, x2:82,y2:40, stroke:p[0], width:2},
+  ];}
+
+  // ── Objects ────────────────────────────────────────────────────────
+  function tplCasa(p, rng) { return [
+    // muro
+    {type:'rect', x:18, y:38, w:64, h:44, fill:p[0]},
+    // tetto
+    {type:'triangle', x1:12,y1:40, x2:50,y2:8, x3:88,y3:40, fill:p[1]},
+    // porta
+    {type:'rect', x:40, y:58, w:16, h:24, rr:2, fill:p[2]},
+    // maniglia
+    {type:'circle', cx:52, cy:72, r:1.5, fill:p[3]},
+    // finestra
+    {type:'rect', x:26, y:48, w:12, h:10, rr:1, fill:p[5]},
+    {type:'rect', x:62, y:48, w:12, h:10, rr:1, fill:p[5]},
+    // croci finestre
+    {type:'line', x1:32,y1:48, x2:32,y2:58, stroke:p[4], width:0.8},
+    {type:'line', x1:26,y1:53, x2:38,y2:53, stroke:p[4], width:0.8},
+    {type:'line', x1:68,y1:48, x2:68,y2:58, stroke:p[4], width:0.8},
+    {type:'line', x1:62,y1:53, x2:74,y2:53, stroke:p[4], width:0.8},
+    // camino
+    {type:'rect', x:62, y:14, w:10, h:18, fill:p[1]},
+  ];}
+
+  function tplAlbero(p, rng) { return [
+    // tronco
+    {type:'rect', x:42, y:54, w:16, h:34, rr:3, fill:p[2]},
+    // chioma (3 cerchi sovrapposti)
+    {type:'circle', cx:50, cy:30, r:26, fill:p[0]},
+    {type:'circle', cx:36, cy:42, r:20, fill:p[0]},
+    {type:'circle', cx:64, cy:42, r:20, fill:p[0]},
+    // dettagli foglie
+    {type:'circle', cx:46, cy:25, r:12, fill:p[1]},
+    {type:'circle', cx:56, cy:38, r:10, fill:p[1]},
+    {type:'circle', cx:38, cy:44, r:8, fill:p[1]},
+    // frutti
+    {type:'circle', cx:50, cy:50, r:3.5, fill:p[3]},
+    {type:'circle', cx:60, cy:28, r:3.5, fill:p[3]},
+    {type:'circle', cx:38, cy:32, r:3, fill:p[3]},
+  ];}
+
+  function tplStella(p, rng) { return [
+    {type:'polygon', points:[
+      [50,6],[58,32],[86,34],[64,52],[72,78],[50,64],[28,78],[36,52],[14,34],[42,32]
+    ], fill:p[0], stroke:p[3], width:1.5},
+    // centro
+    {type:'circle', cx:50, cy:48, r:6, fill:p[3]},
+  ];}
+
+  function tplCuore(p, rng) { return [
+    {type:'circle', cx:36, cy:32, r:18, fill:p[0]},
+    {type:'circle', cx:64, cy:32, r:18, fill:p[0]},
+    {type:'triangle', x1:20,y1:40, x2:80,y2:40, x3:50,y3:82, fill:p[0]},
+    // highlight
+    {type:'circle', cx:32, cy:26, r:5, fill:p[3]},
+  ];}
+
+  function tplAuto(p, rng) { return [
+    // carrozzeria
+    {type:'rect', x:8, y:38, w:84, h:28, rr:10, fill:p[0]},
+    // tetto
+    {type:'rect', x:30, y:22, w:38, h:18, rr:8, fill:p[0]},
+    // finestrini
+    {type:'rect', x:34, y:26, w:14, h:12, rr:2, fill:p[3]},
+    {type:'rect', x:52, y:26, w:14, h:12, rr:2, fill:p[3]},
+    // ruote
+    {type:'circle', cx:24, cy:68, r:10, fill:p[4]},
+    {type:'circle', cx:24, cy:68, r:5, fill:p[5]},
+    {type:'circle', cx:76, cy:68, r:10, fill:p[4]},
+    {type:'circle', cx:76, cy:68, r:5, fill:p[5]},
+    // fanali
+    {type:'circle', cx:90, cy:48, r:3, fill:p[3]},
+    {type:'circle', cx:10, cy:48, r:3, fill:p[3]},
+  ];}
+
+  function tplBarca(p, rng) { return [
+    // scafo
+    {type:'polygon', points:[[10,68],[24,84],[76,84],[90,68]], fill:p[0]},
+    // albero
+    {type:'line', x1:50,y1:20, x2:50,y2:68, stroke:p[2], width:2.5},
+    // vela sinistra
+    {type:'triangle', x1:48,y1:24, x2:48,y2:62, x3:22,y3:62, fill:p[5]},
+    // vela destra
+    {type:'triangle', x1:52,y1:28, x2:52,y2:62, x3:74,y3:62, fill:p[1]},
+    // bandiera
+    {type:'rect', x:50, y:16, w:10, h:7, fill:p[3]},
+  ];}
+
+  function tplChiave(p, rng) { return [
+    // anello
+    {type:'circle', cx:34, cy:36, r:16, fill:'transparent', stroke:p[0], width:8},
+    {type:'circle', cx:34, cy:36, r:10, fill:p[5], stroke:'transparent', width:0},
+    // asta
+    {type:'rect', x:46, y:42, w:46, h:8, rr:2, fill:p[0]},
+    // denti
+    {type:'rect', x:76, y:50, w:6, h:14, fill:p[0]},
+    {type:'rect', x:66, y:50, w:6, h:10, fill:p[0]},
+  ];}
+
+  function tplOrologio(p, rng) { return [
+    // cassa
+    {type:'circle', cx:50, cy:50, r:34, fill:p[5]},
+    {type:'circle', cx:50, cy:50, r:30, fill:p[0]},
+    {type:'circle', cx:50, cy:50, r:28, fill:p[5]},
+    // tacche ore
+    {type:'line', x1:50,y1:24, x2:50,y2:28, stroke:p[4], width:2},
+    {type:'line', x1:50,y1:72, x2:50,y2:76, stroke:p[4], width:2},
+    {type:'line', x1:24,y1:50, x2:28,y2:50, stroke:p[4], width:2},
+    {type:'line', x1:72,y1:50, x2:76,y2:50, stroke:p[4], width:2},
+    // lancette
+    {type:'line', x1:50,y1:50, x2:50,y2:30, stroke:p[4], width:2.5},
+    {type:'line', x1:50,y1:50, x2:62,y2:52, stroke:p[1], width:2},
+    // centro
+    {type:'circle', cx:50, cy:50, r:3, fill:p[2]},
+  ];}
+
+  function tplLibro(p, rng) { return [
+    // copertina sinistra
+    {type:'rect', x:10, y:18, w:38, h:56, rr:3, fill:p[1]},
+    // dorso
+    {type:'rect', x:46, y:18, w:8, h:56, fill:p[2]},
+    // copertina destra
+    {type:'rect', x:52, y:18, w:38, h:56, rr:3, fill:p[0]},
+    // pagine sinistra
+    {type:'rect', x:14, y:22, w:30, h:48, fill:p[5]},
+    // pagine destra
+    {type:'rect', x:56, y:22, w:30, h:48, fill:p[5]},
+    // linee testo
+    {type:'line', x1:18,y1:32, x2:40,y2:32, stroke:p[3], width:1.2},
+    {type:'line', x1:18,y1:40, x2:40,y2:40, stroke:p[3], width:1.2},
+    {type:'line', x1:18,y1:48, x2:38,y2:48, stroke:p[3], width:1.2},
+    {type:'line', x1:60,y1:32, x2:82,y2:32, stroke:p[3], width:1.2},
+    {type:'line', x1:60,y1:40, x2:82,y2:40, stroke:p[3], width:1.2},
+    {type:'line', x1:60,y1:48, x2:80,y2:48, stroke:p[3], width:1.2},
+  ];}
+
+  function tplTazza(p, rng) { return [
+    // corpo
+    {type:'rect', x:28, y:32, w:44, h:42, rr:6, fill:p[0]},
+    // manico
+    {type:'arc', cx:74, cy:52, r:14, start:-Math.PI/2, end:Math.PI/2, stroke:p[0], width:6, close:false},
+    // interno (caffè)
+    {type:'ellipse', cx:50, cy:34, rx:22, ry:7, fill:p[2]},
+    // vapore
+    {type:'arc', cx:42, cy:20, r:5, start:Math.PI, end:0, stroke:p[3], width:1.5, close:false},
+    {type:'arc', cx:52, cy:14, r:5, start:Math.PI, end:0, stroke:p[3], width:1.5, close:false},
+    {type:'arc', cx:62, cy:20, r:5, start:Math.PI, end:0, stroke:p[3], width:1.5, close:false},
+  ];}
+
+  function tplOmbrello(p, rng) { return [
+    // cupola
+    {type:'arc', cx:50, cy:36, r:36, start:Math.PI, end:0, fill:p[0], close:true},
+    // sezioni
+    {type:'line', x1:50,y1:0, x2:50,y2:36, stroke:p[3], width:1.5},
+    {type:'line', x1:24,y1:20, x2:50,y2:36, stroke:p[3], width:1.5},
+    {type:'line', x1:76,y1:20, x2:50,y2:36, stroke:p[3], width:1.5},
+    // manico
+    {type:'line', x1:50,y1:36, x2:50,y2:78, stroke:p[2], width:3},
+    {type:'arc', cx:50, cy:78, r:6, start:0, end:Math.PI, stroke:p[2], width:3, close:false},
+    // punta
+    {type:'circle', cx:50, cy:4, r:3, fill:p[1]},
+  ];}
+
+  function tplLampada(p, rng) { return [
+    // base
+    {type:'rect', x:38, y:74, w:24, h:6, rr:3, fill:p[2]},
+    // stelo
+    {type:'rect', x:46, y:38, w:8, h:38, fill:p[2]},
+    // paralume
+    {type:'polygon', points:[[24,38],[76,38],[64,18],[36,18]], fill:p[0]},
+    // luce
+    {type:'polygon', points:[[32,40],[68,40],[58,68],[42,68]], fill:p[3]},
+    // lampadina
+    {type:'circle', cx:50, cy:44, r:5, fill:p[5]},
+  ];}
+
+  function tplTelefono(p, rng) { return [
+    {type:'rect', x:30, y:12, w:40, h:70, rr:8, fill:p[4]},
+    {type:'rect', x:34, y:18, w:32, h:56, rr:3, fill:p[0]},
+    // tasto home
+    {type:'circle', cx:50, cy:78, r:4, fill:p[5], stroke:p[4], width:1},
+    // speaker
+    {type:'rect', x:40, y:16, w:20, h:3, rr:1.5, fill:p[4]},
+    // camera
+    {type:'circle', cx:64, cy:17.5, r:2, fill:p[1]},
+  ];}
+
+  function tplMatita(p, rng) { return [
+    // corpo
+    {type:'rect', x:30, y:28, w:50, h:14, fill:p[2]},
+    // punta
+    {type:'triangle', x1:80,y1:28, x2:96,y2:35, x3:80,y3:42, fill:p[3]},
+    // mina
+    {type:'triangle', x1:82,y1:32, x2:94,y2:35, x3:82,y3:38, fill:p[4]},
+    // gomma
+    {type:'rect', x:20, y:28, w:12, h:14, rr:3, fill:p[1]},
+    // ghiera
+    {type:'rect', x:28, y:27, w:4, h:16, fill:p[5]},
+    // strisce decorative
+    {type:'line', x1:34,y1:36, x2:76,y2:36, stroke:p[1], width:1.5},
+  ];}
+
+  function tplForbici(p, rng) { return [
+    // lama superiore
+    {type:'polygon', points:[[50,12],[58,44],[44,44]], fill:p[5]},
+    // lama inferiore
+    {type:'polygon', points:[[50,12],[42,44],[56,44]], fill:p[5]},
+    // anello 1
+    {type:'circle', cx:38, cy:66, r:12, fill:'transparent', stroke:p[0], width:5},
+    // anello 2
+    {type:'circle', cx:62, cy:66, r:12, fill:'transparent', stroke:p[0], width:5},
+    // perno
+    {type:'circle', cx:50, cy:44, r:3, fill:p[4]},
+  ];}
+
+  // ── Nature ─────────────────────────────────────────────────────────
+  function tplSole(p, rng) { return [
+    // raggi
+    ...[0,45,90,135,180,225,270,315].map(a => {
+      const rad = a * Math.PI / 180;
+      const x1 = 50 + 28 * Math.cos(rad);
+      const y1 = 50 + 28 * Math.sin(rad);
+      const x2 = 50 + 42 * Math.cos(rad);
+      const y2 = 50 + 42 * Math.sin(rad);
+      return {type:'line', x1, y1, x2, y2, stroke:p[1], width:3};
+    }),
+    // corpo
+    {type:'circle', cx:50, cy:50, r:24, fill:p[0]},
+    // occhi
+    {type:'circle', cx:42, cy:46, r:3, fill:p[4]},
+    {type:'circle', cx:58, cy:46, r:3, fill:p[4]},
+    // sorriso
+    {type:'arc', cx:50, cy:56, r:8, start:0.2, end:Math.PI - 0.2, stroke:p[4], width:1.8, close:false},
+    // guance
+    {type:'circle', cx:38, cy:55, r:3, fill:p[2]},
+    {type:'circle', cx:62, cy:55, r:3, fill:p[2]},
+  ];}
+
+  function tplLuna(p, rng) { return [
+    // luna piena
+    {type:'circle', cx:50, cy:50, r:30, fill:p[3]},
+    // ombra per creare falce
+    {type:'circle', cx:62, cy:42, r:26, fill:p[5]},
+    // stelle decorative
+    {type:'circle', cx:78, cy:22, r:2, fill:p[3]},
+    {type:'circle', cx:20, cy:76, r:1.5, fill:p[3]},
+    {type:'circle', cx:80, cy:72, r:1, fill:p[3]},
+    {type:'circle', cx:16, cy:30, r:1.5, fill:p[3]},
+  ];}
+
+  function tplMontagna(p, rng) { return [
+    // montagna principale
+    {type:'triangle', x1:10,y1:82, x2:50,y2:8, x3:90,y3:82, fill:p[1]},
+    // neve
+    {type:'triangle', x1:50,y1:8, x2:62,y2:44, x3:38,y3:44, fill:p[5]},
+    // montagna secondaria
+    {type:'triangle', x1:50,y1:82, x2:82,y2:18, x3:96,y3:82, fill:p[0]},
+    // neve secondaria
+    {type:'triangle', x1:82,y1:18, x2:88,y2:42, x3:76,y3:42, fill:p[5]},
+    // sole dietro
+    {type:'circle', cx:22, cy:32, r:14, fill:p[3]},
+  ];}
+
+  function tplFiore(p, rng) { return [
+    // petali
+    ...[0, 60, 120, 180, 240, 300].map(a => {
+      const rad = a * Math.PI / 180;
+      const cx = 50 + 18 * Math.cos(rad);
+      const cy = 50 + 18 * Math.sin(rad);
+      return {type:'circle', cx, cy, r:14, fill:p[0]};
+    }),
+    // centro
+    {type:'circle', cx:50, cy:50, r:12, fill:p[3]},
+    // stelo
+    {type:'line', x1:50,y1:62, x2:50,y2:92, stroke:p[1], width:3},
+    // foglia
+    {type:'ellipse', cx:44, cy:78, rx:8, ry:4, rot:-0.5, fill:p[1]},
+    {type:'ellipse', cx:56, cy:82, rx:8, ry:4, rot:0.5, fill:p[1]},
+  ];}
+
+  function tplNuvola(p, rng) { return [
+    {type:'circle', cx:36, cy:50, r:20, fill:p[5]},
+    {type:'circle', cx:54, cy:38, r:22, fill:p[5]},
+    {type:'circle', cx:68, cy:50, r:18, fill:p[5]},
+    {type:'circle', cx:50, cy:54, r:20, fill:p[5]},
+    // base piatta
+    {type:'rect', x:22, y:50, w:56, h:10, fill:p[5]},
+    // ombra
+    {type:'circle', cx:46, cy:56, r:14, fill:p[3]},
+  ];}
+
+  function tplOnda(p, rng) { return [
+    {type:'arc', cx:26, cy:54, r:20, start:Math.PI, end:0, fill:p[0], close:false},
+    {type:'arc', cx:54, cy:54, r:20, start:Math.PI, end:0, fill:p[0], close:false},
+    {type:'arc', cx:82, cy:54, r:20, start:Math.PI, end:0, fill:p[0], close:false},
+    {type:'rect', x:0, y:54, w:100, h:30, fill:p[0]},
+    // schiuma
+    {type:'arc', cx:26, cy:36, r:14, start:0, end:Math.PI, stroke:p[5], width:2, close:false},
+    {type:'arc', cx:54, cy:36, r:14, start:0, end:Math.PI, stroke:p[5], width:2, close:false},
+  ];}
+
+  function tplFulmine(p, rng) { return [
+    {type:'polygon', points:[[54,4],[36,46],[48,46],[38,84],[68,36],[54,36]], fill:p[0]},
+    {type:'polygon', points:[[50,10],[40,42],[50,42],[42,76],[62,38],[52,38]], fill:p[3]},
+  ];}
+
+  function tplFuoco(p, rng) { return [
+    // fiamma esterna
+    {type:'polygon', points:[[50,84],[28,48],[40,52],[32,22],[50,12],[68,22],[60,52],[72,48]], fill:p[1]},
+    // fiamma interna
+    {type:'polygon', points:[[50,80],[36,52],[44,54],[40,34],[50,26],[60,34],[56,54],[64,52]], fill:p[0]},
+    // nucleo
+    {type:'polygon', points:[[50,74],[44,58],[50,60],[46,46],[50,40],[54,46],[50,60],[56,58]], fill:p[3]},
+  ];}
+
+  function tplFoglia(p, rng) { return [
+    {type:'ellipse', cx:50, cy:46, rx:12, ry:36, fill:p[0]},
+    // venatura centrale
+    {type:'line', x1:50,y1:12, x2:50,y2:80, stroke:p[1], width:1.5},
+    // venature laterali
+    {type:'line', x1:50,y1:30, x2:58,y2:22, stroke:p[1], width:1},
+    {type:'line', x1:50,y1:40, x2:58,y2:34, stroke:p[1], width:1},
+    {type:'line', x1:50,y1:50, x2:58,y2:46, stroke:p[1], width:1},
+    {type:'line', x1:50,y1:60, x2:58,y2:58, stroke:p[1], width:1},
+    {type:'line', x1:50,y1:30, x2:42,y2:22, stroke:p[1], width:1},
+    {type:'line', x1:50,y1:40, x2:42,y2:34, stroke:p[1], width:1},
+    {type:'line', x1:50,y1:50, x2:42,y2:46, stroke:p[1], width:1},
+    {type:'line', x1:50,y1:60, x2:42,y2:58, stroke:p[1], width:1},
+    // picciolo
+    {type:'line', x1:50,y1:80, x2:52,y2:90, stroke:p[2], width:2},
+  ];}
+
+  function tplGoccia(p, rng) { return [
+    {type:'polygon', points:[[50,10],[66,44],[62,70],[50,82],[38,70],[34,44]], fill:p[0]},
+    // highlight
+    {type:'circle', cx:44, cy:36, r:6, fill:p[3]},
+  ];}
+
+  // ── Abstract ───────────────────────────────────────────────────────
+  function tplFreccia(p, rng) { return [
+    // asta
+    {type:'rect', x:16, y:42, w:52, h:16, rr:4, fill:p[0]},
+    // punta
+    {type:'triangle', x1:68,y1:28, x2:92,y2:50, x3:68,y3:72, fill:p[0]},
+  ];}
+
+  function tplCerchio(p, rng) { return [
+    {type:'circle', cx:50, cy:50, r:34, fill:p[0]},
+    {type:'circle', cx:50, cy:50, r:22, fill:p[1]},
+    {type:'circle', cx:50, cy:50, r:12, fill:p[3]},
+  ];}
+
+  function tplQuadrato(p, rng) { return [
+    {type:'rect', x:12, y:12, w:76, h:76, rr:4, fill:p[0]},
+    {type:'rect', x:24, y:24, w:52, h:52, rr:3, fill:p[1]},
+    {type:'rect', x:36, y:36, w:28, h:28, rr:2, fill:p[3]},
+  ];}
+
+  function tplTriangolo(p, rng) { return [
+    {type:'triangle', x1:50,y1:6, x2:10,y2:84, x3:90,y3:84, fill:p[0]},
+    {type:'triangle', x1:50,y1:22, x2:26,y2:70, x3:74,y3:70, fill:p[1]},
+    {type:'triangle', x1:50,y1:36, x2:38,y2:58, x3:62,y3:58, fill:p[3]},
+  ];}
+
+  function tplSpirale(p, rng) { return [
+    {type:'arc', cx:50, cy:50, r:32, start:0, end:Math.PI*1.5, stroke:p[0], width:3.5, close:false},
+    {type:'arc', cx:50, cy:50, r:26, start:Math.PI*1.5, end:Math.PI*2.5, stroke:p[1], width:3.5, close:false},
+    {type:'arc', cx:50, cy:50, r:18, start:Math.PI*0.5, end:Math.PI*1.8, stroke:p[0], width:3.5, close:false},
+    {type:'arc', cx:50, cy:50, r:10, start:Math.PI*1.8, end:Math.PI*2.2, stroke:p[1], width:3.5, close:false},
+    {type:'circle', cx:54, cy:42, r:2, fill:p[2]},
+  ];}
+
+  function tplCroce(p, rng) { return [
+    {type:'rect', x:40, y:12, w:20, h:76, rr:3, fill:p[0]},
+    {type:'rect', x:12, y:40, w:76, h:20, rr:3, fill:p[0]},
+    // centro
+    {type:'rect', x:42, y:42, w:16, h:16, fill:p[3]},
+  ];}
+
+  function tplRombo(p, rng) { return [
+    {type:'polygon', points:[[50,6],[90,50],[50,94],[10,50]], fill:p[0]},
+    {type:'polygon', points:[[50,20],[76,50],[50,80],[24,50]], fill:p[1]},
+    {type:'polygon', points:[[50,34],[62,50],[50,66],[38,50]], fill:p[3]},
+  ];}
+
+  function tplEsagono(p, rng) { return [
+    {type:'polygon', points:[[50,6],[82,26],[82,66],[50,86],[18,66],[18,26]], fill:p[0]},
+    {type:'polygon', points:[[50,18],[72,32],[72,60],[50,74],[28,60],[28,32]], fill:p[1]},
+    {type:'polygon', points:[[50,30],[62,38],[62,54],[50,62],[38,54],[38,38]], fill:p[3]},
+  ];}
+
+  // ── Food ───────────────────────────────────────────────────────────
+  function tplMela(p, rng) { return [
+    {type:'circle', cx:48, cy:52, r:24, fill:p[0]},
+    {type:'circle', cx:52, cy:48, r:20, fill:p[1]},
+    // picciolo
+    {type:'line', x1:50,y1:28, x2:52,y2:14, stroke:p[2], width:2.5},
+    // foglia
+    {type:'ellipse', cx:58, cy:18, rx:8, ry:4, rot:0.4, fill:p[1]},
+    // riflesso
+    {type:'circle', cx:40, cy:40, r:6, fill:p[5]},
+  ];}
+
+  function tplPizza(p, rng) { return [
+    // base
+    {type:'circle', cx:50, cy:50, r:36, fill:p[2]},
+    // bordo
+    {type:'circle', cx:50, cy:50, r:34, fill:p[3]},
+    // formaggio
+    {type:'circle', cx:50, cy:50, r:28, fill:p[3]},
+    // fetta
+    {type:'triangle', x1:50,y1:50, x2:22,y2:32, x3:28,y3:66, fill:p[5]},
+    // salame
+    {type:'circle', cx:36, cy:40, r:6, fill:p[1]},
+    {type:'circle', cx:58, cy:44, r:5, fill:p[1]},
+    {type:'circle', cx:50, cy:62, r:5, fill:p[1]},
+  ];}
+
+  function tplGelato(p, rng) { return [
+    // palline
+    {type:'circle', cx:50, cy:24, r:20, fill:p[1]},
+    {type:'circle', cx:50, cy:44, r:18, fill:p[0]},
+    {type:'circle', cx:50, cy:60, r:15, fill:p[3]},
+    // cono
+    {type:'triangle', x1:36,y1:62, x2:64,y2:62, x3:50,y3:90, fill:p[2]},
+    // griglia cono
+    {type:'line', x1:40,y1:70, x2:46,y2:82, stroke:p[4], width:1},
+    {type:'line', x1:48,y1:70, x2:50,y2:86, stroke:p[4], width:1},
+    {type:'line', x1:56,y1:70, x2:54,y2:82, stroke:p[4], width:1},
+    {type:'line', x1:36,y1:70, x2:64,y2:70, stroke:p[4], width:1},
+    {type:'line', x1:38,y1:78, x2:62,y2:78, stroke:p[4], width:1},
+    // ciliegina
+    {type:'circle', cx:50, cy:6, r:5, fill:p[1]},
+    {type:'line', x1:50,y1:4, x2:52,y2:0, stroke:p[4], width:1.2},
+  ];}
+
+  function tplCiliegia(p, rng) { return [
+    {type:'circle', cx:38, cy:50, r:16, fill:p[0]},
+    {type:'circle', cx:62, cy:50, r:16, fill:p[0]},
+    // riflessi
+    {type:'circle', cx:34, cy:44, r:4, fill:p[3]},
+    {type:'circle', cx:58, cy:44, r:4, fill:p[3]},
+    // piccioli
+    {type:'line', x1:42,y1:36, x2:48,y2:18, stroke:p[1], width:1.8},
+    {type:'line', x1:58,y1:36, x2:52,y2:18, stroke:p[1], width:1.8},
+    // foglia
+    {type:'ellipse', cx:50, cy:14, rx:6, ry:3, rot:0.2, fill:p[1]},
+  ];}
+
+  function tplFungo(p, rng) { return [
+    // gambo
+    {type:'rect', x:40, y:44, w:20, h:36, rr:6, fill:p[3]},
+    // cappello
+    {type:'arc', cx:50, cy:42, r:34, start:Math.PI, end:0, fill:p[0], close:true},
+    // cappello interno
+    {type:'arc', cx:50, cy:42, r:26, start:Math.PI, end:0, fill:p[5], close:true},
+    // puntini
+    {type:'circle', cx:40, cy:22, r:4, fill:p[5]},
+    {type:'circle', cx:56, cy:18, r:3.5, fill:p[5]},
+    {type:'circle', cx:60, cy:30, r:3, fill:p[5]},
+    {type:'circle', cx:36, cy:32, r:3, fill:p[5]},
+    // base
+    {type:'ellipse', cx:50, cy:80, rx:14, ry:4, fill:p[1]},
+  ];}
+
+  // ── Tech ───────────────────────────────────────────────────────────
+  function tplComputer(p, rng) { return [
+    // schermo
+    {type:'rect', x:18, y:12, w:64, h:46, rr:4, fill:p[0]},
+    {type:'rect', x:22, y:16, w:56, h:38, rr:2, fill:p[5]},
+    // contenuto schermo
+    {type:'rect', x:26, y:20, w:20, h:12, fill:p[1]},
+    {type:'line', x1:50,y1:24, x2:72,y2:24, stroke:p[3], width:1.5},
+    {type:'line', x1:50,y1:32, x2:70,y2:32, stroke:p[3], width:1.5},
+    {type:'line', x1:50,y1:40, x2:66,y2:40, stroke:p[3], width:1.5},
+    // supporto
+    {type:'rect', x:38, y:56, w:24, h:6, fill:p[2]},
+    // base
+    {type:'rect', x:28, y:62, w:44, h:8, rr:4, fill:p[2]},
+  ];}
+
+  function tplIngranaggio(p, rng) { return [
+    // corpo centrale
+    {type:'circle', cx:50, cy:50, r:18, fill:p[0]},
+    {type:'circle', cx:50, cy:50, r:10, fill:p[5]},
+    // denti
+    ...[0,45,90,135,180,225,270,315].map(a => {
+      const rad = a * Math.PI / 180;
+      const cx = 50 + 28 * Math.cos(rad);
+      const cy = 50 + 28 * Math.sin(rad);
+      return {type:'rect', x:cx-5, y:cy-5, w:10, h:10, rr:2, fill:p[0]};
+    }),
+    // foro centrale
+    {type:'circle', cx:50, cy:50, r:5, fill:p[4]},
+  ];}
+
+  function tplWifi(p, rng) { return [
+    {type:'arc', cx:50, cy:62, r:10, start:Math.PI * 1.1, end:Math.PI * 1.9, stroke:p[0], width:5, close:false},
+    {type:'arc', cx:50, cy:46, r:22, start:Math.PI * 1.15, end:Math.PI * 1.85, stroke:p[0], width:5, close:false},
+    {type:'arc', cx:50, cy:28, r:36, start:Math.PI * 1.2, end:Math.PI * 1.8, stroke:p[0], width:5, close:false},
+    // punto centrale
+    {type:'circle', cx:50, cy:78, r:4, fill:p[0]},
+  ];}
+
+  function tplBatteria(p, rng) { return [
+    {type:'rect', x:16, y:30, w:62, h:40, rr:6, fill:p[0]},
+    {type:'rect', x:20, y:34, w:16, h:32, rr:2, fill:p[1]},
+    {type:'rect', x:40, y:34, w:16, h:32, rr:2, fill:p[1]},
+    {type:'rect', x:60, y:34, w:14, h:32, rr:2, fill:p[1]},
+    // polo positivo
+    {type:'rect', x:78, y:38, w:8, h:24, rr:2, fill:p[2]},
+  ];}
+
+  function tplLente(p, rng) { return [
+    // lente
+    {type:'circle', cx:44, cy:42, r:26, fill:'transparent', stroke:p[0], width:6},
+    // riflesso
+    {type:'arc', cx:38, cy:36, r:14, start:-0.7, end:-0.1, stroke:p[5], width:2.5, close:false},
+    // manico
+    {type:'rect', x:64, y:52, w:28, h:10, rr:4, fill:p[2], rot:0.6},
+    {type:'rect', x:64, y:54, w:24, h:6, rr:3, fill:p[0], rot:0.6},
+  ];}
+
+  // ── More ───────────────────────────────────────────────────────────
+  function tplAncora(p, rng) { return [
+    {type:'circle', cx:50, cy:22, r:8, fill:'transparent', stroke:p[0], width:3.5},
+    // asta
+    {type:'line', x1:50,y1:30, x2:50,y2:78, stroke:p[0], width:3.5},
+    // bracci
+    {type:'arc', cx:50, cy:62, r:22, start:Math.PI * 0.85, end:Math.PI * 0.15, stroke:p[0], width:4, close:false},
+    // punte
+    {type:'triangle', x1:30,y1:68, x2:28,y2:78, x3:34,y3:72, fill:p[0]},
+    {type:'triangle', x1:70,y1:68, x2:72,y2:78, x3:66,y3:72, fill:p[0]},
+    // traversa
+    {type:'line', x1:38,y1:30, x2:62,y2:30, stroke:p[0], width:3},
+  ];}
+
+  function tplScudo(p, rng) { return [
+    {type:'polygon', points:[[50,6],[76,24],[76,56],[50,90],[24,56],[24,24]], fill:p[0]},
+    {type:'polygon', points:[[50,16],[66,30],[66,52],[50,78],[34,52],[34,30]], fill:p[1]},
+    // stella
+    {type:'polygon', points:[[50,30],[54,42],[66,44],[56,52],[58,64],[50,56],[42,64],[44,52],[34,44],[46,42]], fill:p[3]},
+  ];}
+
+  function tplCorona(p, rng) { return [
+    // base
+    {type:'rect', x:16, y:54, w:68, h:22, rr:4, fill:p[0]},
+    // punte
+    {type:'triangle', x1:16,y1:54, x2:22,y2:18, x3:28,y3:54, fill:p[0]},
+    {type:'triangle', x1:34,y1:54, x2:42,y2:8, x3:50,y3:54, fill:p[0]},
+    {type:'triangle', x1:50,y1:54, x2:58,y2:8, x3:66,y3:54, fill:p[0]},
+    {type:'triangle', x1:72,y1:54, x2:78,y2:18, x3:84,y3:54, fill:p[0]},
+    // gemme
+    {type:'circle', cx:22, cy:36, r:3.5, fill:p[3]},
+    {type:'circle', cx:42, cy:32, r:4, fill:p[1]},
+    {type:'circle', cx:50, cy:36, r:3.5, fill:p[3]},
+    {type:'circle', cx:58, cy:32, r:4, fill:p[1]},
+    {type:'circle', cx:78, cy:36, r:3.5, fill:p[3]},
+    // bordo inferiore
+    {type:'rect', x:14, y:72, w:72, h:6, rr:2, fill:p[2]},
+  ];}
+
+  function tplOrma(p, rng) { return [
+    // tallone
+    {type:'ellipse', cx:50, cy:68, rx:14, ry:18, fill:p[0]},
+    // pianta
+    {type:'ellipse', cx:50, cy:42, rx:18, ry:22, fill:p[0]},
+    // dita
+    {type:'ellipse', cx:34, cy:22, rx:6, ry:9, fill:p[0]},
+    {type:'ellipse', cx:48, cy:18, rx:6, ry:10, fill:p[0]},
+    {type:'ellipse', cx:62, cy:22, rx:6, ry:9, fill:p[0]},
+  ];}
+
+  function tplOcchio(p, rng) { return [
+    {type:'ellipse', cx:50, cy:48, rx:28, ry:18, fill:p[5]},
+    // iride
+    {type:'circle', cx:50, cy:48, r:14, fill:p[0]},
+    // pupilla
+    {type:'circle', cx:50, cy:48, r:6, fill:p[4]},
+    // riflesso
+    {type:'circle', cx:47, cy:44, r:2.5, fill:p[5]},
+    // ciglia superiori
+    {type:'line', x1:30,y1:34, x2:38,y2:30, stroke:p[4], width:2},
+    {type:'line', x1:40,y1:30, x2:46,y2:28, stroke:p[4], width:2},
+    {type:'line', x1:54,y1:28, x2:60,y2:30, stroke:p[4], width:2},
+    {type:'line', x1:62,y1:30, x2:70,y2:34, stroke:p[4], width:2},
+  ];}
+
+  function tplPinguino(p, rng) { return [
+    // corpo
+    {type:'ellipse', cx:50, cy:56, rx:22, ry:28, fill:p[4]},
+    // pancia bianca
+    {type:'ellipse', cx:50, cy:60, rx:14, ry:20, fill:p[5]},
+    // testa
+    {type:'circle', cx:50, cy:30, r:16, fill:p[4]},
+    // occhi
+    {type:'circle', cx:44, cy:27, r:2.5, fill:p[5]},
+    {type:'circle', cx:56, cy:27, r:2.5, fill:p[5]},
+    {type:'circle', cx:43, cy:26, r:1.2, fill:p[4]},
+    {type:'circle', cx:55, cy:26, r:1.2, fill:p[4]},
+    // becco
+    {type:'triangle', x1:46,y1:33, x2:54,y2:33, x3:50,y3:39, fill:p[3]},
+    // ali
+    {type:'ellipse', cx:30, cy:56, rx:8, ry:20, rot:-0.2, fill:p[4]},
+    {type:'ellipse', cx:70, cy:56, rx:8, ry:20, rot:0.2, fill:p[4]},
+    // piedi
+    {type:'ellipse', cx:44, cy:84, rx:8, ry:4, fill:p[3]},
+    {type:'ellipse', cx:56, cy:84, rx:8, ry:4, fill:p[3]},
+  ];}
+
+  // ── Template Map ───────────────────────────────────────────────────
+  const KEYWORD_MAP = {
+    // Animals
+    cane: tplCane, dog: tplCane, cagnolino: tplCane,
+    gatto: tplGatto, cat: tplGatto, micio: tplGatto, gattino: tplGatto,
+    uccello: tplUccello, bird: tplUccello, volatile: tplUccello,
+    pesce: tplPesce, fish: tplPesce, pesciolino: tplPesce,
+    cavallo: tplCavallo, horse: tplCavallo, pony: tplCavallo,
+    farfalla: tplFarfalla, butterfly: tplFarfalla,
+    gufo: tplGufo, owl: tplGufo, civetta: tplGufo,
+    coniglio: tplConiglio, rabbit: tplConiglio, bunny: tplConiglio, lepre: tplConiglio,
+    tartaruga: tplTartaruga, turtle: tplTartaruga,
+    elefante: tplElefante, elephant: tplElefante,
+    pinguino: tplPinguino, penguin: tplPinguino,
+    // Objects
+    casa: tplCasa, house: tplCasa, home: tplCasa, abitazione: tplCasa,
+    albero: tplAlbero, tree: tplAlbero, pianta: tplAlbero, pino: tplAlbero,
+    stella: tplStella, star: tplStella, cometa: tplStella,
+    cuore: tplCuore, heart: tplCuore, amore: tplCuore,
+    auto: tplAuto, car: tplAuto, macchina: tplAuto, automobile: tplAuto,
+    barca: tplBarca, boat: tplBarca, nave: tplBarca, vela: tplBarca,
+    chiave: tplChiave, key: tplChiave,
+    orologio: tplOrologio, clock: tplOrologio, ora: tplOrologio, tempo: tplOrologio,
+    libro: tplLibro, book: tplLibro,
+    tazza: tplTazza, cup: tplTazza, caffè: tplTazza, caffe: tplTazza, tè: tplTazza, te: tplTazza,
+    ombrello: tplOmbrello, umbrella: tplOmbrello,
+    lampada: tplLampada, lamp: tplLampada, luce: tplLampada,
+    telefono: tplTelefono, phone: tplTelefono, smartphone: tplTelefono, cellulare: tplTelefono,
+    matita: tplMatita, pencil: tplMatita, penna: tplMatita,
+    forbici: tplForbici, scissors: tplForbici,
+    // Nature
+    sole: tplSole, sun: tplSole, giorno: tplSole,
+    luna: tplLuna, moon: tplLuna, notte: tplLuna, falce: tplLuna,
+    montagna: tplMontagna, mountain: tplMontagna, monte: tplMontagna,
+    fiore: tplFiore, flower: tplFiore, petalo: tplFiore,
+    nuvola: tplNuvola, cloud: tplNuvola, nube: tplNuvola, cielo: tplNuvola,
+    onda: tplOnda, wave: tplOnda, mare: tplOnda,
+    fulmine: tplFulmine, lightning: tplFulmine, lampo: tplFulmine, tuono: tplFulmine,
+    fuoco: tplFuoco, fire: tplFuoco, fiamma: tplFuoco, fiamme: tplFuoco,
+    foglia: tplFoglia, leaf: tplFoglia, foglie: tplFoglia,
+    goccia: tplGoccia, drop: tplGoccia, acqua: tplGoccia, pioggia: tplGoccia,
+    // Abstract
+    freccia: tplFreccia, arrow: tplFreccia, direzione: tplFreccia,
+    cerchio: tplCerchio, circle: tplCerchio, tondo: tplCerchio,
+    quadrato: tplQuadrato, square: tplQuadrato,
+    triangolo: tplTriangolo, triangle: tplTriangolo,
+    spirale: tplSpirale, spiral: tplSpirale,
+    croce: tplCroce, cross: tplCroce, più: tplCroce, piu: tplCroce,
+    rombo: tplRombo, diamond: tplRombo, diamante: tplRombo,
+    esagono: tplEsagono, hexagon: tplEsagono,
+    // Food
+    mela: tplMela, apple: tplMela, frutto: tplMela,
+    pizza: tplPizza,
+    gelato: tplGelato, icecream: tplGelato, ice: tplGelato, cono: tplGelato,
+    ciliegia: tplCiliegia, cherry: tplCiliegia, ciliegie: tplCiliegia,
+    fungo: tplFungo, mushroom: tplFungo,
+    // Tech
+    computer: tplComputer, pc: tplComputer, monitor: tplComputer, schermo: tplComputer,
+    ingranaggio: tplIngranaggio, gear: tplIngranaggio, ruota: tplIngranaggio, meccanismo: tplIngranaggio,
+    wifi: tplWifi,
+    batteria: tplBatteria, battery: tplBatteria, energia: tplBatteria,
+    lente: tplLente, magnifier: tplLente, search: tplLente, cerca: tplLente, zoom: tplLente,
+    // More
+    ancora: tplAncora, anchor: tplAncora,
+    scudo: tplScudo, shield: tplScudo,
+    corona: tplCorona, crown: tplCorona, re: tplCorona,
+    orma: tplOrma, footprint: tplOrma, piede: tplOrma, piedi: tplOrma, impronta: tplOrma,
+    occhio: tplOcchio, eye: tplOcchio, sguardo: tplOcchio,
+  };
+
+  // ── Fallback Abstract Generator ────────────────────────────────────
+  function fallbackShapes(word, palette, rng) {
+    const shapes = [];
+    const n = 4 + Math.floor(rng() * 5); // 4-8 shapes
+    const darkIdx = 4;
+
+    // Structure type based on hash
+    const structType = Math.abs(hashStr(word + 'struct')) % 4;
+
+    for (let i = 0; i < n; i++) {
+      const colorIdx = Math.floor(rng() * 4);
+      const color = palette[colorIdx];
+      const typeRand = rng();
+
+      let shape;
+      if (structType === 0) {
+        // Radial: shapes arranged in a circle
+        const angle = (i / n) * Math.PI * 2 + rng() * 0.3;
+        const dist = 20 + rng() * 25;
+        const cx = 50 + Math.cos(angle) * dist;
+        const cy = 50 + Math.sin(angle) * dist;
+        const size = 6 + rng() * 12;
+        if (typeRand < 0.35) shape = {type:'circle', cx, cy, r:size, fill:color};
+        else if (typeRand < 0.7) shape = {type:'rect', x:cx-size/2, y:cy-size/2, w:size*2, h:size*2, rr:size*0.3, fill:color};
+        else shape = {type:'triangle', x1:cx, y1:cy-size, x2:cx-size, y2:cy+size*0.6, x3:cx+size, y3:cy+size*0.6, fill:color};
+      } else if (structType === 1) {
+        // Grid: shapes in rows/cols
+        const cols = 3;
+        const row = Math.floor(i / cols);
+        const col = i % cols;
+        const cx = 20 + col * 30 + rng() * 10;
+        const cy = 20 + row * 30 + rng() * 10;
+        const size = 5 + rng() * 10;
+        if (typeRand < 0.4) shape = {type:'circle', cx, cy, r:size, fill:color};
+        else if (typeRand < 0.75) shape = {type:'rect', x:cx-size, y:cy-size, w:size*2, h:size*2, rr:3, fill:color};
+        else shape = {type:'line', x1:cx-size, y1:cy, x2:cx+size, y2:cy, stroke:color, width:2 + rng()*2};
+      } else if (structType === 2) {
+        // Layered: concentric-like shapes
+        const cx = 50 + (rng() - 0.5) * 20;
+        const cy = 50 + (rng() - 0.5) * 20;
+        const size = 10 + i * 8;
+        if (typeRand < 0.5) shape = {type:'circle', cx, cy, r:size, fill:color};
+        else shape = {type:'rect', x:cx-size, y:cy-size*0.6, w:size*2, h:size*1.2, rr:size*0.2, fill:color};
+      } else {
+        // Diagonal: shapes along a diagonal
+        const t = i / (n - 1);
+        const cx = 10 + t * 80 + (rng() - 0.5) * 12;
+        const cy = 10 + t * 70 + (rng() - 0.5) * 12;
+        const size = 5 + rng() * 14;
+        if (typeRand < 0.35) shape = {type:'circle', cx, cy, r:size, fill:color};
+        else if (typeRand < 0.65) shape = {type:'rect', x:cx-size, y:cy-size*0.5, w:size*2, h:size, rr:size*0.2, fill:color};
+        else shape = {type:'triangle', x1:cx, y1:cy-size, x2:cx-size*0.7, y2:cy+size*0.6, x3:cx+size*0.7, y3:cy+size*0.6, fill:color};
+      }
+      shapes.push(shape);
+    }
+
+    // Add some connecting lines for structure types that benefit
+    if (structType === 0 && n >= 3) {
+      shapes.push({type:'circle', cx:50, cy:50, r:6 + rng()*4, fill:palette[Math.floor(rng()*4)]});
+    }
+
+    return shapes;
+  }
+
+  // ── Main Draw Function ─────────────────────────────────────────────
+  function getShapes(word, variant) {
+    const w = word.toLowerCase().trim();
+    const templateFn = KEYWORD_MAP[w];
+    const palette = pickPalette(w, variant);
+    const seed = hashStr(w + '|v' + variant);
+    const rng = createRNG(seed);
+
+    if (templateFn) {
+      return { shapes: templateFn(palette, rng), palette, isFallback: false };
+    }
+
+    // Try fuzzy: check if any keyword contains our word or vice versa
+    for (const [kw, fn] of Object.entries(KEYWORD_MAP)) {
+      if (w.length >= 3 && (kw.includes(w) || w.includes(kw))) {
+        return { shapes: fn(palette, rng), palette, isFallback: false, matchedKey: kw };
+      }
+    }
+
+    // Fallback
+    return { shapes: fallbackShapes(w, palette, rng), palette, isFallback: true };
+  }
+
+  function drawIcon(word, variant) {
+    const { shapes, isFallback, matchedKey } = getShapes(word, variant);
+    const seed = hashStr(word + '|v' + variant);
+    const rng = createRNG(seed + 999);
+    renderShapes(ctx, shapes, 256, rng);
+
+    currentWord = word;
+    currentVariant = variant;
+    variantNumber.textContent = '#' + variant;
+    variantBadge.style.display = 'inline-flex';
+
+    return { isFallback, matchedKey };
+  }
+
+  // ── Export PNG 64x64 ───────────────────────────────────────────────
+  function exportPNG64() {
+    if (!currentWord) return null;
+
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = 64;
+    exportCanvas.height = 64;
+    const exportCtx = exportCanvas.getContext('2d');
+
+    // White background
+    exportCtx.fillStyle = '#FFFFFF';
+    exportCtx.fillRect(0, 0, 64, 64);
+
+    const { shapes } = getShapes(currentWord, currentVariant);
+    const seed = hashStr(currentWord + '|v' + currentVariant);
+    const rng = createRNG(seed + 999);
+    renderShapes(exportCtx, shapes, 64, rng);
+
+    return exportCanvas.toDataURL('image/png');
+  }
+
+  function downloadPNG() {
+    const dataUrl = exportPNG64();
+    if (!dataUrl) return;
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = (currentWord || 'icona') + '-iconografo.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast('Icona scaricata come PNG 64×64', 'success');
+  }
+
+  // ── Toast ──────────────────────────────────────────────────────────
+  let toastTimer = null;
+  function showToast(message, type = '') {
+    if (toastTimer) clearTimeout(toastTimer);
+    toast.textContent = message;
+    toast.className = 'toast ' + type + ' visible';
+    toastTimer = setTimeout(() => {
+      toast.classList.remove('visible');
+      toastTimer = null;
+    }, 2500);
+  }
+
+  // ── UI State ───────────────────────────────────────────────────────
+  function setHasIcon(has) {
+    btnDownload.disabled = !has;
+    btnSave.disabled = !has;
+    btnRegenerate.disabled = !has;
+  }
+
+  // ── Generate ───────────────────────────────────────────────────────
+  function generate() {
+    const word = wordInput.value.trim();
+    if (!word) {
+      showToast('Scrivi una parola per generare un\'icona', 'error');
+      return;
+    }
+
+    currentVariant = 0;
+    const { isFallback, matchedKey } = drawIcon(word, 0);
+    setHasIcon(true);
+
+    if (isFallback) {
+      showToast('Nessun template specifico per "' + word + '" — pattern astratto generato');
+    } else if (matchedKey) {
+      showToast('Template più vicino: "' + matchedKey + '"');
+    }
+  }
+
+  function regenerate() {
+    if (!currentWord) return;
+    currentVariant++;
+    drawIcon(currentWord, currentVariant);
+    showToast('Variante #' + currentVariant + ' generata');
+  }
+
+  // ── Gallery ────────────────────────────────────────────────────────
+  async function saveToGallery() {
+    if (!currentWord) return;
+    const dataUrl = exportPNG64();
+    if (!dataUrl) return;
+
+    try {
+      const resp = await fetch('api/icons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          word: currentWord,
+          variant: currentVariant,
+          data: dataUrl
+        })
+      });
+      if (!resp.ok) throw new Error('Errore server');
+      showToast('Icona salvata nella galleria condivisa!', 'success');
+      await loadGallery();
+    } catch (err) {
+      showToast('Errore nel salvataggio: ' + err.message, 'error');
+    }
+  }
+
+  async function loadGallery() {
+    try {
+      const resp = await fetch('api/icons');
+      if (!resp.ok) throw new Error('Errore server');
+      const icons = await resp.json();
+
+      galleryGrid.innerHTML = '';
+      if (!icons || icons.length === 0) {
+        galleryGrid.innerHTML = '<div class="empty-state" id="gallery-empty"><p>Nessuna icona salvata. Genera un\'icona e salvala per vederla qui.</p></div>';
+        return;
+      }
+
+      for (const icon of icons) {
+        const item = document.createElement('div');
+        item.className = 'gallery-item';
+        item.setAttribute('role', 'listitem');
+        item.title = icon.word + ' (variante #' + icon.variant + ')';
+        item.innerHTML = `
+          <img src="${icon.data}" alt="Icona ${icon.word}" width="64" height="64" loading="lazy">
+          <span class="word-label">${icon.word} #${icon.variant}</span>
+        `;
+        item.addEventListener('click', () => {
+          wordInput.value = icon.word;
+          currentVariant = icon.variant;
+          drawIcon(icon.word, icon.variant);
+          setHasIcon(true);
+          showToast('Caricata: ' + icon.word + ' #' + icon.variant);
+        });
+        galleryGrid.appendChild(item);
+      }
+    } catch (err) {
+      console.error('Gallery load error:', err);
+    }
+  }
+
+  // ── Event Listeners ────────────────────────────────────────────────
+  btnGenerate.addEventListener('click', generate);
+  btnRegenerate.addEventListener('click', regenerate);
+  btnDownload.addEventListener('click', downloadPNG);
+  btnSave.addEventListener('click', saveToGallery);
+  btnRefreshGallery.addEventListener('click', loadGallery);
+
+  wordInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      generate();
+    }
+  });
+
+  // ── Initial Draw ───────────────────────────────────────────────────
+  // Show a default icon on load
+  function drawPlaceholder() {
+    // Draw a small dot grid pattern or a simple icon
+    ctx.clearRect(0, 0, 256, 256);
+    ctx.fillStyle = '#D4CFC8';
+    ctx.font = '14px "JetBrains Mono", monospace';
+    ctx.fillText('iconografo', 88, 136);
+  }
+  drawPlaceholder();
+
+  // Load gallery on start
+  loadGallery();
+
+  // Initial state
+  setHasIcon(false);
+  </script>
+</body>
+</html>
