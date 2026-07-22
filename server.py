@@ -66,7 +66,7 @@ def robots():
     return (
         "User-agent: *\n"
         "Allow: /\n"
-        "Sitemap: https://cristianporco.it/app/iconografo/sitemap.xml\n"
+        "Sitemap: https://github.com/bonciarello/iconografo/sitemap.xml\n"
     ), 200, {"Content-Type": "text/plain"}
 
 
@@ -76,7 +76,7 @@ def sitemap():
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
         "  <url>\n"
-        "    <loc>https://cristianporco.it/app/iconografo/</loc>\n"
+        "    <loc>https://github.com/bonciarello/iconografo/</loc>\n"
         "    <changefreq>monthly</changefreq>\n"
         "    <priority>0.8</priority>\n"
         "  </url>\n"
